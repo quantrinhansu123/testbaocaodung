@@ -1,20 +1,91 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AuditRecord, AppSheetConfig } from '../types';
-import { addAppSheetAudit } from '../services/appsheetService';
-import { X, Save, Plus, Store, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Save, Plus, Store, CheckCircle2, AlertCircle, ChevronDown } from 'lucide-react';
 
 interface NewAuditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddLocalRecord: (record: AuditRecord) => void;
+  onSaved?: () => Promise<void>;
   config: AppSheetConfig;
+  dealers: AuditRecord[];
 }
+
+const DEPARTMENT_OPTIONS = ['Hobi Nhựa', 'Hobi Gỗ'] as const;
+
+const toDepartmentValue = (selected: string[]): string =>
+  selected.length === 2 ? 'Cả 2 phòng' : selected[0];
+
+const DepartmentMultiSelect: React.FC<{
+  label: string;
+  selected: string[];
+  onChange: (next: string[]) => void;
+  options?: readonly string[];
+  placeholder?: string;
+}> = ({ label, selected, onChange, options = DEPARTMENT_OPTIONS, placeholder = 'Chọn phòng KD' }) => {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleOption = (option: string) => {
+    onChange(
+      selected.includes(option)
+        ? selected.filter(item => item !== option)
+        : [...selected, option]
+    );
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <label className="block font-bold text-slate-600 mb-1">{label}</label>
+      <button
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        className="w-full flex items-center justify-between px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold text-left"
+      >
+        <span className={selected.length ? '' : 'text-slate-400 font-normal'}>
+          {selected.length ? selected.join(', ') : placeholder}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg p-2 space-y-1">
+          {options.map(option => (
+            <label
+              key={option}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-50 cursor-pointer font-semibold text-slate-700"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(option)}
+                onChange={() => toggleOption(option)}
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+              />
+              {option}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const NewAuditModal: React.FC<NewAuditModalProps> = ({
   isOpen,
   onClose,
   onAddLocalRecord,
+  onSaved,
   config,
+  dealers,
 }) => {
   const [dealerName, setDealerName] = useState('');
   const [address, setAddress] = useState('');
@@ -23,32 +94,75 @@ export const NewAuditModal: React.FC<NewAuditModalProps> = ({
   const [mysteryShopperName, setMysteryShopperName] = useState('Phạm Văn Hùng');
   
   const [isDisplayingHobi, setIsDisplayingHobi] = useState(true);
-  const [displayDepartment, setDisplayDepartment] = useState<AuditRecord['displayDepartment']>('Cả 2 phòng');
-  
+  const [displayDepts, setDisplayDepts] = useState<string[]>(['Hobi Nhựa', 'Hobi Gỗ']);
+
   const [isRecommendingHobi, setIsRecommendingHobi] = useState(true);
-  const [recommendDepartment, setRecommendDepartment] = useState<AuditRecord['recommendDepartment']>('Cả 2 phòng');
+  const [recommendDepts, setRecommendDepts] = useState<string[]>(['Hobi Nhựa', 'Hobi Gỗ']);
   
-  const [segmentsInput, setSegmentsInput] = useState('Sàn nhựa hèm khóa 4mm, Sàn gỗ công nghiệp 8mm');
-  const [otherBrandsInput, setOtherBrandsInput] = useState('Kosmos, An Cường');
+  const [selectedSegments, setSelectedSegments] = useState<string[]>([]);
+  const [segmentOptions, setSegmentOptions] = useState<string[]>([]);
+  const [otherBrands, setOtherBrands] = useState<string[]>([]);
+  const [competitorOptions, setCompetitorOptions] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+
+    const fetchTable = (tableName: string) => fetch('/api/appsheet/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableName })
+    }).then(response => response.json());
+
+    void Promise.all([fetchTable('Co_so'), fetchTable('Phan_khuc')])
+      .then(([coSoResult, segmentResult]) => {
+        if (cancelled) return;
+        const names = (Array.isArray(coSoResult.rows) ? coSoResult.rows : [])
+          .map((row: Record<string, any>) => row.Ten_co_so || row.ten_co_so)
+          .filter((name: unknown): name is string => typeof name === 'string' && name.trim().length > 0);
+        setCompetitorOptions(Array.from(new Set(names)));
+        const segments = (Array.isArray(segmentResult.rows) ? segmentResult.rows : [])
+          .map((row: Record<string, any>) => row.Ten_phan_khuc || row.ten_phan_khuc)
+          .filter((name: unknown): name is string => typeof name === 'string' && name.trim().length > 0);
+        setSegmentOptions(Array.from(new Set(segments)));
+      })
+      .catch(() => {
+        setCompetitorOptions([]);
+        setSegmentOptions([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dealerName.trim() || !address.trim()) {
-      alert('Vui lòng nhập tên đại lý và địa chỉ.');
+      alert('Vui lòng chọn tên đại lý và nhập địa chỉ.');
+      return;
+    }
+    if (isDisplayingHobi && displayDepts.length === 0) {
+      alert('Vui lòng chọn ít nhất 1 phòng KD trưng bày.');
+      return;
+    }
+    if (isRecommendingHobi && recommendDepts.length === 0) {
+      alert('Vui lòng chọn ít nhất 1 phòng KD được giới thiệu.');
       return;
     }
 
     setIsSubmitting(true);
     setSubmitMessage(null);
 
+    const numericId = Number(Date.now().toString().slice(-9));
     const newRecord: AuditRecord = {
-      id: `TRB-${Date.now().toString().slice(-4)}`,
+      id: String(numericId),
       dealerId: `DL-${Math.floor(Math.random() * 90 + 10)}`,
       dealerName: dealerName.trim(),
       address: address.trim(),
@@ -57,24 +171,44 @@ export const NewAuditModal: React.FC<NewAuditModalProps> = ({
       auditDate: new Date().toISOString().slice(0, 16).replace('T', ' '),
       mysteryShopperName,
       isDisplayingHobi,
-      displayDepartment: isDisplayingHobi ? displayDepartment : 'Không trưng bày',
+      displayDepartment: isDisplayingHobi ? (toDepartmentValue(displayDepts) as AuditRecord['displayDepartment']) : 'Không trưng bày',
       isRecommendingHobi,
-      recommendDepartment: isRecommendingHobi ? recommendDepartment : 'Không giới thiệu',
-      hobiSegmentsRecommended: segmentsInput.split(',').map(s => s.trim()).filter(Boolean),
-      otherBrands: otherBrandsInput.split(',').map(b => b.trim()).filter(Boolean),
+      recommendDepartment: isRecommendingHobi ? (toDepartmentValue(recommendDepts) as AuditRecord['recommendDepartment']) : 'Không giới thiệu',
+      hobiSegmentsRecommended: selectedSegments,
+      otherBrands,
       nonHobiCompetitorsBySegment: [],
       notes: notes.trim()
     };
 
-    // Push to AppSheet API
-    const res = await addAppSheetAudit(newRecord, config);
-    if (res.success) {
-      setSubmitMessage('Đã thêm thành công vào AppSheet API!');
-    } else {
-      setSubmitMessage('Đã thêm vào dữ liệu thời gian thực ứng dụng!');
+    const response = await fetch('/api/appsheet/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        appId: config.appId,
+        apiKey: config.apiKey,
+        tableName: 'Khao_sat',
+        row: {
+          id: numericId,
+          dai_ly: newRecord.dealerName,
+          trung_bay: newRecord.isDisplayingHobi ? displayDepts.join(', ') : 'Không',
+          gioi_thieu: newRecord.isRecommendingHobi ? recommendDepts.join(', ') : 'Không'
+        }
+      })
+    });
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      const message = typeof result.error === 'string'
+        ? result.error
+        : JSON.stringify(result.error || result.data || `HTTP ${response.status}`);
+      setSubmitMessage(`Không thể lưu vào Khao_sat: ${message}`);
+      setIsSubmitting(false);
+      return;
     }
 
+    setSubmitMessage('Đã thêm thành công vào bảng Khao_sat!');
     onAddLocalRecord(newRecord);
+    if (onSaved) await onSaved();
     setIsSubmitting(false);
 
     setTimeout(() => {
@@ -97,7 +231,7 @@ export const NewAuditModal: React.FC<NewAuditModalProps> = ({
                 Thêm Phiếu Khảo Sát Thị Trường Mới
               </h3>
               <p className="text-xs text-slate-500">
-                Gửi dữ liệu trực tiếp tới AppSheet API (Bảng: {config.tableName})
+                Gửi dữ liệu trực tiếp tới AppSheet API (Bảng: Khao_sat)
               </p>
             </div>
           </div>
@@ -119,14 +253,27 @@ export const NewAuditModal: React.FC<NewAuditModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-bold text-slate-700 mb-1">Tên Đại Lý *</label>
-              <input
-                type="text"
+              <select
                 required
-                placeholder="VD: Đại lý Sàn Gỗ An Tâm"
                 value={dealerName}
-                onChange={(e) => setDealerName(e.target.value)}
+                onChange={(e) => {
+                  const selectedName = e.target.value;
+                  setDealerName(selectedName);
+                  const selectedDealer = dealers.find(item => item.dealerName === selectedName);
+                  if (selectedDealer?.address) setAddress(selectedDealer.address);
+                }}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">Chọn đại lý từ bảng Dai_ly</option>
+                {dealers.map(item => (
+                  <option key={item.id} value={item.dealerName}>
+                    {item.dealerName}
+                  </option>
+                ))}
+              </select>
+              {dealers.length === 0 && (
+                <p className="mt-1 text-[11px] text-amber-700">Bảng Dai_ly chưa có dữ liệu.</p>
+              )}
             </div>
             <div>
               <label className="block font-bold text-slate-700 mb-1">Khu Vực / Tỉnh Thành</label>
@@ -185,18 +332,11 @@ export const NewAuditModal: React.FC<NewAuditModalProps> = ({
             </div>
 
             {isDisplayingHobi && (
-              <div>
-                <label className="block font-bold text-slate-600 mb-1">Phòng KD Trưng Bày:</label>
-                <select
-                  value={displayDepartment}
-                  onChange={(e) => setDisplayDepartment(e.target.value as any)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold"
-                >
-                  <option value="Cả 2 phòng">Cả 2 phòng (Hobi Nhựa + Hobi Gỗ)</option>
-                  <option value="Hobi Nhựa">Hobi Nhựa</option>
-                  <option value="Hobi Gỗ">Hobi Gỗ</option>
-                </select>
-              </div>
+              <DepartmentMultiSelect
+                label="Phòng KD Trưng Bày:"
+                selected={displayDepts}
+                onChange={setDisplayDepts}
+              />
             )}
           </div>
 
@@ -216,42 +356,39 @@ export const NewAuditModal: React.FC<NewAuditModalProps> = ({
             </div>
 
             {isRecommendingHobi && (
-              <div>
-                <label className="block font-bold text-slate-600 mb-1">Phòng KD Được Giới Thiệu:</label>
-                <select
-                  value={recommendDepartment}
-                  onChange={(e) => setRecommendDepartment(e.target.value as any)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold"
-                >
-                  <option value="Cả 2 phòng">Cả 2 phòng (Hobi Nhựa + Hobi Gỗ)</option>
-                  <option value="Hobi Nhựa">Hobi Nhựa</option>
-                  <option value="Hobi Gỗ">Hobi Gỗ</option>
-                </select>
-              </div>
+              <DepartmentMultiSelect
+                label="Phòng KD Được Giới Thiệu:"
+                selected={recommendDepts}
+                onChange={setRecommendDepts}
+              />
             )}
           </div>
 
           {/* Phân khúc Hobi & Thương hiệu khác */}
           <div>
-            <label className="block font-bold text-slate-700 mb-1">Các Phân Khúc Hobi Được Giới Thiệu (Phẩy cách nhau):</label>
-            <input
-              type="text"
-              placeholder="Sàn nhựa hèm khóa 4mm, Sàn gỗ công nghiệp 8mm, Tấm ốp tường PVC"
-              value={segmentsInput}
-              onChange={(e) => setSegmentsInput(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
+            <DepartmentMultiSelect
+              label="Các Phân Khúc Hobi Được Giới Thiệu:"
+              selected={selectedSegments}
+              onChange={setSelectedSegments}
+              options={segmentOptions}
+              placeholder="Chọn từ bảng Phan_khuc"
             />
+            {segmentOptions.length === 0 && (
+              <p className="mt-1 text-[11px] text-amber-700">Bảng Phan_khuc chưa có dữ liệu để lựa chọn.</p>
+            )}
           </div>
 
           <div>
-            <label className="block font-bold text-slate-700 mb-1">Thương Hiệu Cạnh Tranh / Khác Tại Đại Lý:</label>
-            <input
-              type="text"
-              placeholder="Kosmos, An Cường, Glotex, Inovar"
-              value={otherBrandsInput}
-              onChange={(e) => setOtherBrandsInput(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
+            <DepartmentMultiSelect
+              label="Thương Hiệu Cạnh Tranh / Khác Tại Đại Lý:"
+              selected={otherBrands}
+              onChange={setOtherBrands}
+              options={competitorOptions}
+              placeholder="Chọn từ bảng Co_so"
             />
+            {competitorOptions.length === 0 && (
+              <p className="mt-1 text-[11px] text-amber-700">Bảng Co_so chưa có dữ liệu để lựa chọn.</p>
+            )}
           </div>
 
           <div>
