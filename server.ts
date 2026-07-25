@@ -187,6 +187,12 @@ app.post('/api/appsheet/add', async (req, res) => {
   }
 });
 
+// Favicon: avoid noisy 404 in browser console
+app.get('/favicon.ico', (_req, res) => {
+  res.redirect(301, '/favicon.svg');
+});
+app.use(express.static(path.join(process.cwd(), 'public')));
+
 // Start Express + Vite
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
