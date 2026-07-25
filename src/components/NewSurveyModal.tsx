@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AuditRecord, CoSoItem, PhanKhucItem } from '../types';
 import { Check, ChevronDown, ClipboardPlus, Save, X } from 'lucide-react';
 
+export interface TrungBayJson {
+  co_so: Array<{ id: string; ten_co_so: string }>;
+}
+
 export interface GioiThieuJson {
   co_so: Array<{ id: string; ten_co_so: string }>;
   phan_khuc: Array<{ id: string; ten_phan_khuc: string }>;
@@ -106,7 +110,8 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
   const [dealer, setDealer] = useState('');
   const [isDisplaying, setIsDisplaying] = useState(false);
   const [isRecommending, setIsRecommending] = useState(false);
-  const [selectedCoSoIds, setSelectedCoSoIds] = useState<string[]>([]);
+  const [selectedDisplayCoSoIds, setSelectedDisplayCoSoIds] = useState<string[]>([]);
+  const [selectedRecommendCoSoIds, setSelectedRecommendCoSoIds] = useState<string[]>([]);
   const [selectedPhanKhucIds, setSelectedPhanKhucIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,14 +132,21 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
 
   if (!isOpen) return null;
 
+  const mapCoSoByIds = (ids: string[]) =>
+    coSoList
+      .filter(item => ids.includes(item.id))
+      .map(item => ({ id: item.id, ten_co_so: item.ten_co_so }));
+
+  const buildTrungBayJson = (): TrungBayJson => ({
+    co_so: isDisplaying ? mapCoSoByIds(selectedDisplayCoSoIds) : []
+  });
+
   const buildGioiThieuJson = (): GioiThieuJson => {
     if (!isRecommending) {
       return { co_so: [], phan_khuc: [] };
     }
     return {
-      co_so: coSoList
-        .filter(item => selectedCoSoIds.includes(item.id))
-        .map(item => ({ id: item.id, ten_co_so: item.ten_co_so })),
+      co_so: mapCoSoByIds(selectedRecommendCoSoIds),
       phan_khuc: phanKhucList
         .filter(item => selectedPhanKhucIds.includes(item.id))
         .map(item => ({ id: item.id, ten_phan_khuc: item.ten_phan_khuc }))
@@ -143,7 +155,11 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (isRecommending && selectedCoSoIds.length === 0 && selectedPhanKhucIds.length === 0) {
+    if (isDisplaying && selectedDisplayCoSoIds.length === 0) {
+      setError('Khi có trưng bày, hãy chọn ít nhất 1 Cơ sở từ danh sách Co_so.');
+      return;
+    }
+    if (isRecommending && selectedRecommendCoSoIds.length === 0 && selectedPhanKhucIds.length === 0) {
       setError('Khi có giới thiệu, hãy chọn ít nhất 1 Cơ sở hoặc 1 Phân khúc.');
       return;
     }
@@ -151,7 +167,6 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
     setIsSubmitting(true);
     setError(null);
     try {
-      const gioiThieuPayload = buildGioiThieuJson();
       const response = await fetch('/api/appsheet/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -160,9 +175,8 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
           row: {
             id: Number(Date.now().toString().slice(-9)),
             dai_ly: dealer,
-            trung_bay: isDisplaying ? 'Có' : 'Không',
-            // AppSheet Text/JSON column: store jsonb-compatible object as JSON string
-            gioi_thieu: JSON.stringify(gioiThieuPayload)
+            trung_bay: JSON.stringify(buildTrungBayJson()),
+            gioi_thieu: JSON.stringify(buildGioiThieuJson())
           }
         })
       });
@@ -176,7 +190,8 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
       setDealer('');
       setIsDisplaying(false);
       setIsRecommending(false);
-      setSelectedCoSoIds([]);
+      setSelectedDisplayCoSoIds([]);
+      setSelectedRecommendCoSoIds([]);
       setSelectedPhanKhucIds([]);
       onClose();
     } catch (err: any) {
@@ -188,7 +203,7 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 p-5">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
@@ -197,7 +212,7 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
             <div>
               <h3 className="font-bold text-slate-900">Thêm phiếu khảo sát</h3>
               <p className="text-xs text-slate-500">
-                Lưu vào Khao_sat — <code className="font-mono">gioi_thieu</code> dạng JSON
+                <code className="font-mono">trung_bay</code> / <code className="font-mono">gioi_thieu</code> dạng JSON
               </p>
             </div>
           </div>
@@ -227,15 +242,32 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
             )}
           </div>
 
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 font-semibold">
-            <input
-              type="checkbox"
-              checked={isDisplaying}
-              onChange={event => setIsDisplaying(event.target.checked)}
-              className="h-4 w-4 rounded text-violet-600"
-            />
-            Có trưng bày
-          </label>
+          <div className="space-y-3 rounded-xl border border-sky-100 bg-sky-50/50 p-3">
+            <label className="flex cursor-pointer items-center gap-2 font-bold text-sky-900">
+              <input
+                type="checkbox"
+                checked={isDisplaying}
+                onChange={event => {
+                  const checked = event.target.checked;
+                  setIsDisplaying(checked);
+                  if (!checked) setSelectedDisplayCoSoIds([]);
+                }}
+                className="h-4 w-4 rounded text-sky-600"
+              />
+              Có trưng bày — lưu JSON vào cột <code className="font-mono">trung_bay</code>
+            </label>
+
+            {isDisplaying && (
+              <MultiSelectDropdown
+                label="Cơ sở trưng bày (Co_so)"
+                placeholder="Chọn cơ sở (tickbox)"
+                options={coSoOptions}
+                selectedIds={selectedDisplayCoSoIds}
+                onChange={setSelectedDisplayCoSoIds}
+                emptyHint="Bảng Co_so chưa có dữ liệu."
+              />
+            )}
+          </div>
 
           <div className="space-y-3 rounded-xl border border-violet-100 bg-violet-50/40 p-3">
             <label className="flex cursor-pointer items-center gap-2 font-bold text-violet-900">
@@ -246,7 +278,7 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
                   const checked = event.target.checked;
                   setIsRecommending(checked);
                   if (!checked) {
-                    setSelectedCoSoIds([]);
+                    setSelectedRecommendCoSoIds([]);
                     setSelectedPhanKhucIds([]);
                   }
                 }}
@@ -261,8 +293,8 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
                   label="Cơ sở được giới thiệu"
                   placeholder="Chọn cơ sở (Co_so)"
                   options={coSoOptions}
-                  selectedIds={selectedCoSoIds}
-                  onChange={setSelectedCoSoIds}
+                  selectedIds={selectedRecommendCoSoIds}
+                  onChange={setSelectedRecommendCoSoIds}
                   emptyHint="Bảng Co_so chưa có dữ liệu."
                 />
                 <MultiSelectDropdown
@@ -273,9 +305,6 @@ export const NewSurveyModal: React.FC<NewSurveyModalProps> = ({
                   onChange={setSelectedPhanKhucIds}
                   emptyHint="Bảng Phan_khuc chưa có dữ liệu."
                 />
-                <p className="text-[11px] text-slate-500">
-                  Ví dụ JSON: <code className="font-mono">{`{"co_so":[...],"phan_khuc":[...]}`}</code>
-                </p>
               </div>
             )}
           </div>
