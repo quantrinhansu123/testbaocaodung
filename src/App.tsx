@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AuditRecord, AppSheetTable, SyncStatus, AppSheetConfig, PhanKhucItem } from './types';
-import { fetchAppSheetAudits, fetchAppSheetTables, fetchPhanKhucItems, DEFAULT_APPSHEET_CONFIG } from './services/appsheetService';
+import { AuditRecord, AppSheetTable, SyncStatus, AppSheetConfig, PhanKhucItem, CoSoItem } from './types';
+import { fetchAppSheetAudits, fetchAppSheetTables, fetchPhanKhucItems, fetchCoSoItems, DEFAULT_APPSHEET_CONFIG } from './services/appsheetService';
 
 // Header & Modal
 import { Header } from './components/Header';
@@ -31,6 +31,7 @@ export default function App() {
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [displayDealerRecords, setDisplayDealerRecords] = useState<AuditRecord[]>([]);
   const [segmentRecords, setSegmentRecords] = useState<PhanKhucItem[]>([]);
+  const [coSoRecords, setCoSoRecords] = useState<CoSoItem[]>([]);
   const [khaoSatRecords, setKhaoSatRecords] = useState<AuditRecord[]>([]);
   const [khaoSatStatus, setKhaoSatStatus] = useState({ isLoading: false, error: null as string | null });
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(30); // 30s default
@@ -64,17 +65,19 @@ export default function App() {
   const loadData = useCallback(async () => {
     setSyncStatus(prev => ({ ...prev, isLoading: true }));
     setKhaoSatStatus({ isLoading: true, error: null });
-    const [result, displayDealerResult, khaoSatResult, segmentResult] = await Promise.all([
+    const [result, displayDealerResult, khaoSatResult, segmentResult, coSoResult] = await Promise.all([
       fetchAppSheetAudits(config),
       fetchAppSheetAudits({ ...config, tableName: 'Dai_ly' }, false),
       fetchAppSheetAudits({ ...config, tableName: 'Khao_sat' }, false),
-      fetchPhanKhucItems()
+      fetchPhanKhucItems(),
+      fetchCoSoItems()
     ]);
 
     setRecords(result.records);
     setDisplayDealerRecords(displayDealerResult.records);
     setKhaoSatRecords(khaoSatResult.records);
     setSegmentRecords(segmentResult.records);
+    setCoSoRecords(coSoResult.records);
     setKhaoSatStatus({
       isLoading: false,
       error: khaoSatResult.error || null
@@ -395,6 +398,8 @@ export default function App() {
       <NewSurveyModal
         isOpen={isSurveyModalOpen}
         dealers={displayDealerRecords}
+        coSoList={coSoRecords}
+        phanKhucList={segmentRecords}
         onClose={() => setIsSurveyModalOpen(false)}
         onSaved={loadData}
       />

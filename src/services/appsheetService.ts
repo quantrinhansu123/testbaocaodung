@@ -1,4 +1,4 @@
-import { AuditRecord, AppSheetConfig, AppSheetTablesResult, PhanKhucItem } from '../types';
+import { AuditRecord, AppSheetConfig, AppSheetTablesResult, PhanKhucItem, CoSoItem } from '../types';
 import { INITIAL_MOCK_AUDITS } from '../data/mockData';
 
 export const DEFAULT_APPSHEET_CONFIG: AppSheetConfig = {
@@ -315,5 +315,34 @@ export async function fetchPhanKhucItems(): Promise<{ records: PhanKhucItem[]; e
     };
   } catch (err: any) {
     return { records: [], error: err?.message || 'Không thể tải bảng Phan_khuc' };
+  }
+}
+
+export async function fetchCoSoItems(): Promise<{ records: CoSoItem[]; error?: string }> {
+  try {
+    const res = await fetch('/api/appsheet/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableName: 'Co_so' })
+    });
+    const result = await res.json();
+
+    if (!res.ok || !result.success) {
+      return { records: [], error: result.error || `Server status ${res.status}` };
+    }
+
+    return {
+      records: (Array.isArray(result.rows) ? result.rows : []).map((row: Record<string, any>, idx: number) => ({
+        id: String(row.id || row.ID || `CS-${idx + 1}`),
+        ten_co_so: String(row.Ten_co_so || row.ten_co_so || ''),
+        dia_chi: String(row.dia_chi || row.Dia_chi || ''),
+        so_dien_thoai: String(row.so_dien_thoai || ''),
+        khu_vuc: String(row.khu_vuc || ''),
+        phong_kinh_doanh: String(row.phong_kinh_doanh || ''),
+        ngay_tao: String(row.ngay_tao || '')
+      }))
+    };
+  } catch (err: any) {
+    return { records: [], error: err?.message || 'Không thể tải bảng Co_so' };
   }
 }
