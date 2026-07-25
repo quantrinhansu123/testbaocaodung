@@ -194,11 +194,14 @@ export async function fetchAppSheetAudits(
       body: JSON.stringify(config)
     });
 
+    const result = await res.json().catch(() => ({} as any));
     if (!res.ok) {
-      throw new Error(`Server status ${res.status}`);
+      throw new Error(
+        typeof result.error === 'string'
+          ? result.error
+          : `API /appsheet/fetch lỗi HTTP ${res.status}`
+      );
     }
-
-    const result = await res.json();
     if (result.success && Array.isArray(result.rows) && result.rows.length > 0) {
       const parsed = result.rows.map((r: Record<string, any>, idx: number) => parseAppSheetRowToAudit(r, idx));
       return {
