@@ -12,6 +12,7 @@ import { Header } from './components/Header';
 import { NewAuditModal } from './components/NewAuditModal';
 import { NewDisplayDealerModal } from './components/NewDisplayDealerModal';
 import { NewSegmentModal } from './components/NewSegmentModal';
+import { NewSurveyModal } from './components/NewSurveyModal';
 
 // Analytics Sections
 import { Section2DisplayByDept } from './components/Section2DisplayByDept';
@@ -54,6 +55,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDisplayDealerModalOpen, setIsDisplayDealerModalOpen] = useState(false);
   const [isSegmentModalOpen, setIsSegmentModalOpen] = useState(false);
+  const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
 
   // Region Filter state
   const [selectedRegionFilter, setSelectedRegionFilter] = useState('All');
@@ -152,7 +154,7 @@ export default function App() {
         autoRefreshInterval={autoRefreshInterval}
         setAutoRefreshInterval={setAutoRefreshInterval}
         onRefresh={loadData}
-        onOpenNewModal={() => setIsModalOpen(true)}
+        onOpenNewModal={() => setIsSurveyModalOpen(true)}
         appSheetTableCount={appSheetTables.length}
         tableStatus={tableStatus}
       />
@@ -342,6 +344,7 @@ export default function App() {
               isLoading={khaoSatStatus.isLoading}
               error={khaoSatStatus.error}
               onRefresh={loadData}
+              onAddSurvey={() => setIsSurveyModalOpen(true)}
             />
           )}
 
@@ -375,7 +378,9 @@ export default function App() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddLocalRecord={handleAddLocalRecord}
+        onSaved={loadData}
         config={config}
+        dealers={displayDealerRecords}
       />
       <NewDisplayDealerModal
         isOpen={isDisplayDealerModalOpen}
@@ -385,6 +390,12 @@ export default function App() {
       <NewSegmentModal
         isOpen={isSegmentModalOpen}
         onClose={() => setIsSegmentModalOpen(false)}
+        onSaved={loadData}
+      />
+      <NewSurveyModal
+        isOpen={isSurveyModalOpen}
+        dealers={displayDealerRecords}
+        onClose={() => setIsSurveyModalOpen(false)}
         onSaved={loadData}
       />
 

@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Bảng điều khiển khảo sát đại lý theo thời gian thực | <span className="text-slate-300 font-medium">Bảng: {config.tableName}</span>
+                Bảng điều khiển khảo sát đại lý theo thời gian thực | <span className="text-slate-300 font-medium">Thêm khảo sát → Khao_sat</span>
               </p>
             </div>
           </div>
@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-sm transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Thêm khảo sát</span>
+              <span>Thêm khảo sát (Khao_sat)</span>
             </button>
 
           </div>
