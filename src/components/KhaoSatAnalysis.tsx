@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AuditRecord } from '../types';
-import { ClipboardList, Store, Megaphone, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ClipboardList, Store, Megaphone, CheckCircle2, AlertTriangle, RefreshCw, Plus } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { Section1DisplayVsRecommend } from './Section1DisplayVsRecommend';
 
@@ -9,19 +9,87 @@ interface KhaoSatAnalysisProps {
   isLoading?: boolean;
   error?: string | null;
   onRefresh?: () => void;
+  onAddSurvey?: () => void;
+}
+
+function parseJsonField(raw: unknown): any | null {
+  if (raw == null || raw === '') return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+/** Count flags directly from Khao_sat columns trung_bay / gioi_thieu */
+function hasTrungBay(record: AuditRecord): boolean {
+  const raw = record.rawAppSheetData?.trung_bay ?? record.rawAppSheetData?.Trung_bay;
+  const parsed = parseJsonField(raw);
+  if (parsed && typeof parsed === 'object') {
+    const coSo = Array.isArray(parsed.co_so) ? parsed.co_so : [];
+    return coSo.length > 0;
+  }
+  return record.isDisplayingHobi;
+}
+
+function hasGioiThieu(record: AuditRecord): boolean {
+  const raw = record.rawAppSheetData?.gioi_thieu ?? record.rawAppSheetData?.Gioi_thieu;
+  const parsed = parseJsonField(raw);
+  if (parsed && typeof parsed === 'object') {
+    const coSo = Array.isArray(parsed.co_so) ? parsed.co_so : [];
+    const phanKhuc = Array.isArray(parsed.phan_khuc) ? parsed.phan_khuc : [];
+    return coSo.length > 0 || phanKhuc.length > 0;
+  }
+  return record.isRecommendingHobi;
+}
+
+function summarizeTrungBay(record: AuditRecord): string {
+  const raw = record.rawAppSheetData?.trung_bay;
+  const parsed = parseJsonField(raw);
+  if (parsed?.co_so?.length) {
+    return parsed.co_so.map((c: any) => c.ten_co_so || c.id).join(', ');
+  }
+  return hasTrungBay(record) ? 'Có' : 'Không';
+}
+
+function summarizeGioiThieu(record: AuditRecord): string {
+  const raw = record.rawAppSheetData?.gioi_thieu;
+  const parsed = parseJsonField(raw);
+  if (!parsed || typeof parsed !== 'object') {
+    return hasGioiThieu(record) ? 'Có' : 'Không';
+  }
+  const parts: string[] = [];
+  if (parsed.co_so?.length) {
+    parts.push(`CS: ${parsed.co_so.map((c: any) => c.ten_co_so || c.id).join(', ')}`);
+  }
+  if (parsed.phan_khuc?.length) {
+    parts.push(`PK: ${parsed.phan_khuc.map((p: any) => p.ten_phan_khuc || p.id).join(', ')}`);
+  }
+  return parts.length ? parts.join(' | ') : 'Không';
 }
 
 export const KhaoSatAnalysis: React.FC<KhaoSatAnalysisProps> = ({
   records,
   isLoading = false,
   error = null,
-  onRefresh
+  onRefresh,
+  onAddSurvey
 }) => {
-  const total = records.length;
-  const displaying = records.filter(r => r.isDisplayingHobi).length;
-  const recommending = records.filter(r => r.isRecommendingHobi).length;
-  const both = records.filter(r => r.isDisplayingHobi && r.isRecommendingHobi).length;
-  const neither = records.filter(r => !r.isDisplayingHobi && !r.isRecommendingHobi).length;
+  const stats = useMemo(() => {
+    const total = records.length;
+    const displaying = records.filter(hasTrungBay).length;
+    const recommending = records.filter(hasGioiThieu).length;
+    const both = records.filter(r => hasTrungBay(r) && hasGioiThieu(r)).length;
+    const neither = records.filter(r => !hasTrungBay(r) && !hasGioiThieu(r)).length;
+    return { total, displaying, recommending, both, neither };
+  }, [records]);
+
+  const { total, displaying, recommending, both, neither } = stats;
 
   const chartData = [
     { name: 'Trưng bày', count: displaying, color: '#0284c7' },
@@ -29,6 +97,15 @@ export const KhaoSatAnalysis: React.FC<KhaoSatAnalysisProps> = ({
     { name: 'Cả hai', count: both, color: '#7c3aed' },
     { name: 'Chưa có', count: neither, color: '#94a3b8' },
   ];
+
+  const sectionRecords = useMemo(
+    () => records.map(r => ({
+      ...r,
+      isDisplayingHobi: hasTrungBay(r),
+      isRecommendingHobi: hasGioiThieu(r)
+    })),
+    [records]
+  );
 
   return (
     <div className="space-y-6">
@@ -59,6 +136,15 @@ export const KhaoSatAnalysis: React.FC<KhaoSatAnalysisProps> = ({
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                 Làm mới
+              </button>
+            )}
+            {onAddSurvey && (
+              <button
+                onClick={onAddSurvey}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-violet-700"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Thêm khảo sát
               </button>
             )}
           </div>
@@ -162,29 +248,30 @@ export const KhaoSatAnalysis: React.FC<KhaoSatAnalysisProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {records.map(r => {
-                      const raw = r.rawAppSheetData || {};
+                      const displayingRow = hasTrungBay(r);
+                      const recommendingRow = hasGioiThieu(r);
                       return (
                         <tr key={r.id} className="hover:bg-slate-50">
                           <td className="p-3 font-mono text-slate-600">{r.id}</td>
                           <td className="p-3 font-semibold text-slate-900">
-                            {r.dealerName || String(raw.dai_ly || '—')}
+                            {r.dealerName || String(r.rawAppSheetData?.dai_ly || '—')}
                           </td>
-                          <td className="p-3 text-center">
-                            <span className={`inline-flex px-2 py-0.5 rounded-full font-bold ${
-                              r.isDisplayingHobi
+                          <td className="p-3 text-center max-w-[220px]">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full font-bold text-left ${
+                              displayingRow
                                 ? 'bg-sky-100 text-sky-800'
                                 : 'bg-slate-100 text-slate-500'
                             }`}>
-                              {String(raw.trung_bay || (r.isDisplayingHobi ? 'Có' : 'Không'))}
+                              {summarizeTrungBay(r)}
                             </span>
                           </td>
-                          <td className="p-3 text-center">
-                            <span className={`inline-flex px-2 py-0.5 rounded-full font-bold ${
-                              r.isRecommendingHobi
+                          <td className="p-3 text-center max-w-[260px]">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full font-bold text-left ${
+                              recommendingRow
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-slate-100 text-slate-500'
                             }`}>
-                              {String(raw.gioi_thieu || (r.isRecommendingHobi ? 'Có' : 'Không'))}
+                              {summarizeGioiThieu(r)}
                             </span>
                           </td>
                           <td className="p-3 text-slate-500">{r.notes || '—'}</td>
@@ -199,8 +286,8 @@ export const KhaoSatAnalysis: React.FC<KhaoSatAnalysisProps> = ({
         )}
       </div>
 
-      {records.length > 0 && (
-        <Section1DisplayVsRecommend records={records} />
+      {sectionRecords.length > 0 && (
+        <Section1DisplayVsRecommend records={sectionRecords} />
       )}
     </div>
   );

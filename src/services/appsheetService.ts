@@ -53,23 +53,46 @@ export function parseAppSheetRowToAudit(row: Record<string, any>, index: number)
     getRawField(row, ['Nguoi_Khao_Sat', 'Người khảo sát', 'Shopper']) || 'KTV Khảo sát'
   );
 
-  // Parsing Trưng bày Hobi (Khao_sat uses trung_bay)
-  const rawTB = getRawField(row, ['trung_bay', 'Trung_Bay_Hobi', 'Trưng bày Hobi', 'DisplayHobi', 'Display']);
-  let isDisplayingHobi = true;
-  if (rawTB === undefined || rawTB === null) {
-    isDisplayingHobi = true;
-  } else if (typeof rawTB === 'boolean') {
-    isDisplayingHobi = rawTB;
-  } else if (typeof rawTB === 'string') {
-    const val = rawTB.toLowerCase().trim();
-    if (!val || val.includes('không') || val.includes('no') || val === 'false' || val === '0') {
-      isDisplayingHobi = false;
-    } else {
-      isDisplayingHobi = true;
+  // Parsing Trưng bày / Giới thiệu for Khao_sat JSON + legacy text
+  const parsePresenceFlag = (raw: any): boolean => {
+    if (raw === undefined || raw === null) return false;
+    if (typeof raw === 'boolean') return raw;
+    if (typeof raw === 'number') return raw !== 0;
+
+    if (typeof raw === 'object') {
+      if (Array.isArray(raw)) return raw.length > 0;
+      const coSo = Array.isArray(raw.co_so) ? raw.co_so : [];
+      const phanKhuc = Array.isArray(raw.phan_khuc) ? raw.phan_khuc : [];
+      return coSo.length > 0 || phanKhuc.length > 0;
     }
-  } else {
-    isDisplayingHobi = Boolean(rawTB);
-  }
+
+    if (typeof raw === 'string') {
+      const val = raw.trim();
+      if (!val) return false;
+      const lower = val.toLowerCase();
+      if (lower.includes('không') || lower === 'no' || lower === 'false' || lower === '0') {
+        return false;
+      }
+
+      // JSON stored in AppSheet text/jsonb columns
+      if (val.startsWith('{') || val.startsWith('[')) {
+        try {
+          return parsePresenceFlag(JSON.parse(val));
+        } catch {
+          return false;
+        }
+      }
+
+      // Legacy plain text: "Có", department names, etc.
+      return true;
+    }
+
+    return Boolean(raw);
+  };
+
+  // Parsing Trưng bày Hobi (Khao_sat uses trung_bay JSON { co_so: [...] })
+  const rawTB = getRawField(row, ['trung_bay', 'Trung_Bay_Hobi', 'Trưng bày Hobi', 'DisplayHobi', 'Display']);
+  const isDisplayingHobi = parsePresenceFlag(rawTB);
 
   // Display Department
   const rawDisplayDept = String(
@@ -86,23 +109,9 @@ export function parseAppSheetRowToAudit(row: Record<string, any>, index: number)
     displayDepartment = 'Hobi Gỗ';
   }
 
-  // Parsing Giới thiệu Hobi (Khao_sat uses gioi_thieu)
+  // Parsing Giới thiệu Hobi (Khao_sat uses gioi_thieu JSON { co_so, phan_khuc })
   const rawGT = getRawField(row, ['gioi_thieu', 'Gioi_Thieu_Hobi', 'Giới thiệu Hobi', 'RecommendHobi', 'Recommend']);
-  let isRecommendingHobi = true;
-  if (rawGT === undefined || rawGT === null) {
-    isRecommendingHobi = true;
-  } else if (typeof rawGT === 'boolean') {
-    isRecommendingHobi = rawGT;
-  } else if (typeof rawGT === 'string') {
-    const val = rawGT.toLowerCase().trim();
-    if (!val || val.includes('không') || val.includes('no') || val === 'false' || val === '0') {
-      isRecommendingHobi = false;
-    } else {
-      isRecommendingHobi = true;
-    }
-  } else {
-    isRecommendingHobi = Boolean(rawGT);
-  }
+  const isRecommendingHobi = parsePresenceFlag(rawGT);
 
   // Recommend Department
   const rawRecommendDept = String(
