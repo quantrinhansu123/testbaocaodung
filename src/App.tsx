@@ -4,34 +4,36 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AuditRecord, SyncStatus, AppSheetConfig } from './types';
-import { fetchAppSheetAudits, DEFAULT_APPSHEET_CONFIG } from './services/appsheetService';
+import { AuditRecord, AppSheetTable, SyncStatus, AppSheetConfig, PhanKhucItem } from './types';
+import { fetchAppSheetAudits, fetchAppSheetTables, fetchPhanKhucItems, DEFAULT_APPSHEET_CONFIG } from './services/appsheetService';
 
 // Header & Modal
 import { Header } from './components/Header';
 import { NewAuditModal } from './components/NewAuditModal';
+import { NewDisplayDealerModal } from './components/NewDisplayDealerModal';
+import { NewSegmentModal } from './components/NewSegmentModal';
 
-// Analytics Sections (1 to 6)
-import { Section1DisplayVsRecommend } from './components/Section1DisplayVsRecommend';
+// Analytics Sections
 import { Section2DisplayByDept } from './components/Section2DisplayByDept';
-import { Section3RecommendByDept } from './components/Section3RecommendByDept';
 import { Section4SegmentShare } from './components/Section4SegmentShare';
-import { Section5DealerDetail } from './components/Section5DealerDetail';
-import { Section6CompetitorBySegment } from './components/Section6CompetitorBySegment';
 import { DepartmentSummaryTable } from './components/DepartmentSummaryTable';
 import { CoSoTable } from './components/CoSoTable';
+import { PhanKhucTable } from './components/PhanKhucTable';
+import { KhaoSatAnalysis } from './components/KhaoSatAnalysis';
 
 import { 
-  BarChart3, LayoutDashboard, Store, Megaphone, 
-  Search, Filter, RefreshCw, Layers, ShieldAlert,
-  ArrowUpRight, Sparkles, Database, Building2, Building
+  LayoutDashboard, Filter, Layers, Database, Building, ClipboardList
 } from 'lucide-react';
 
 export default function App() {
   const [config] = useState<AppSheetConfig>(DEFAULT_APPSHEET_CONFIG);
   const [records, setRecords] = useState<AuditRecord[]>([]);
+  const [displayDealerRecords, setDisplayDealerRecords] = useState<AuditRecord[]>([]);
+  const [segmentRecords, setSegmentRecords] = useState<PhanKhucItem[]>([]);
+  const [khaoSatRecords, setKhaoSatRecords] = useState<AuditRecord[]>([]);
+  const [khaoSatStatus, setKhaoSatStatus] = useState({ isLoading: false, error: null as string | null });
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(30); // 30s default
-  const [activeTab, setActiveTab] = useState<'all' | 'coso' | 'dept' | '1' | '2' | '3' | '4' | '5' | '6'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'coso' | 'phankhuc' | 'phantich' | '2' | '4'>('all');
 
   
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
@@ -42,7 +44,16 @@ export default function App() {
     totalRecords: 0
   });
 
+  const [appSheetTables, setAppSheetTables] = useState<AppSheetTable[]>([]);
+  const [tableStatus, setTableStatus] = useState({
+    isLoading: false,
+    error: null as string | null,
+    lastRefresh: null as string | null
+  });
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDisplayDealerModalOpen, setIsDisplayDealerModalOpen] = useState(false);
+  const [isSegmentModalOpen, setIsSegmentModalOpen] = useState(false);
 
   // Region Filter state
   const [selectedRegionFilter, setSelectedRegionFilter] = useState('All');
@@ -50,9 +61,22 @@ export default function App() {
   // Load Data from AppSheet API
   const loadData = useCallback(async () => {
     setSyncStatus(prev => ({ ...prev, isLoading: true }));
-    const result = await fetchAppSheetAudits(config);
+    setKhaoSatStatus({ isLoading: true, error: null });
+    const [result, displayDealerResult, khaoSatResult, segmentResult] = await Promise.all([
+      fetchAppSheetAudits(config),
+      fetchAppSheetAudits({ ...config, tableName: 'Dai_ly' }, false),
+      fetchAppSheetAudits({ ...config, tableName: 'Khao_sat' }, false),
+      fetchPhanKhucItems()
+    ]);
 
     setRecords(result.records);
+    setDisplayDealerRecords(displayDealerResult.records);
+    setKhaoSatRecords(khaoSatResult.records);
+    setSegmentRecords(segmentResult.records);
+    setKhaoSatStatus({
+      isLoading: false,
+      error: khaoSatResult.error || null
+    });
     setSyncStatus({
       lastSyncTime: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       isLoading: false,
@@ -66,6 +90,22 @@ export default function App() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const loadAppSheetTables = useCallback(async () => {
+    setTableStatus({ isLoading: true, error: null, lastRefresh: tableStatus.lastRefresh });
+    const result = await fetchAppSheetTables(config);
+    if (result.success) {
+      setAppSheetTables(result.tables?.Tables || []);
+      setTableStatus({ isLoading: false, error: null, lastRefresh: new Date().toLocaleTimeString('vi-VN') });
+    } else {
+      setAppSheetTables([]);
+      setTableStatus({ isLoading: false, error: result.error || 'Không thể lấy danh sách bảng AppSheet.', lastRefresh: null });
+    }
+  }, [config, tableStatus.lastRefresh]);
+
+  useEffect(() => {
+    loadAppSheetTables();
+  }, [loadAppSheetTables]);
 
   // Auto Refresh Interval
   useEffect(() => {
@@ -86,6 +126,9 @@ export default function App() {
   const filteredRecords = selectedRegionFilter === 'All' 
     ? records 
     : records.filter(r => r.region === selectedRegionFilter);
+  const filteredDisplayDealerRecords = selectedRegionFilter === 'All'
+    ? displayDealerRecords
+    : displayDealerRecords.filter(r => r.region === selectedRegionFilter);
 
   const availableRegions = Array.from(new Set(records.map(r => r.region).filter(Boolean)));
 
@@ -100,6 +143,8 @@ export default function App() {
         setAutoRefreshInterval={setAutoRefreshInterval}
         onRefresh={loadData}
         onOpenNewModal={() => setIsModalOpen(true)}
+        appSheetTableCount={appSheetTables.length}
+        tableStatus={tableStatus}
       />
 
       {/* Main Content Container */}
@@ -135,27 +180,27 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveTab('dept')}
+              onClick={() => setActiveTab('phankhuc')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === 'dept'
-                  ? 'bg-blue-700 text-white shadow-xs'
-                  : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200'
+                activeTab === 'phankhuc'
+                  ? 'bg-indigo-700 text-white shadow-xs'
+                  : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200'
               }`}
             >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Bảng Phòng Kinh Doanh</span>
+              <Layers className="w-3.5 h-3.5" />
+              <span>Bảng Phân Khúc</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('1')}
+              onClick={() => setActiveTab('phantich')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === '1'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
+                activeTab === 'phantich'
+                  ? 'bg-violet-700 text-white shadow-xs'
+                  : 'text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200'
               }`}
             >
-              <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-800 text-[10px] flex items-center justify-center">1</span>
-              <span>Giới Thiệu vs Trưng Bày</span>
+              <ClipboardList className="w-3.5 h-3.5" />
+              <span>Phân tích (Khao_sat)</span>
             </button>
 
             <button
@@ -171,18 +216,6 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveTab('3')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === '3'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-800 text-[10px] flex items-center justify-center">3</span>
-              <span>Đại Lý Giới Thiệu</span>
-            </button>
-
-            <button
               onClick={() => setActiveTab('4')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 activeTab === '4'
@@ -192,30 +225,6 @@ export default function App() {
             >
               <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-800 text-[10px] flex items-center justify-center">4</span>
               <span>Phân Khúc Hobi</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('5')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === '5'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-800 text-[10px] flex items-center justify-center">5</span>
-              <span>Chi Tiết Đại Lý</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('6')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === '6'
-                  ? 'bg-slate-700 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-800 text-[10px] flex items-center justify-center">6</span>
-              <span>Đối Thủ Phân Khúc</span>
             </button>
           </div>
 
@@ -237,6 +246,52 @@ export default function App() {
             </select>
           </div>
 
+        </div>
+
+        {/* AppSheet Connection Status */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Kết nối AppSheet</div>
+              <p className="text-xs text-slate-500 mt-1">
+                Ứng dụng đang kết nối tới <span className="font-semibold text-slate-700">{config.appName}</span>.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className={`px-2 py-1 rounded-full font-semibold ${tableStatus.error ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'}`}>
+                {tableStatus.isLoading ? 'Đang kiểm tra...' : tableStatus.error ? 'Không kết nối' : 'Đã kết nối'}
+              </span>
+              <button
+                onClick={() => {
+                  loadData();
+                  loadAppSheetTables();
+                }}
+                disabled={tableStatus.isLoading || syncStatus.isLoading}
+                className="px-3 py-1 rounded-lg bg-slate-900 text-white text-[11px] font-bold hover:bg-slate-800 disabled:opacity-50"
+              >
+                Cập nhật kết nối
+              </button>
+              {tableStatus.lastRefresh && (
+                <span className="text-slate-400">Cập nhật: {tableStatus.lastRefresh}</span>
+              )}
+            </div>
+          </div>
+
+          {tableStatus.error ? (
+            <div className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3">
+              {tableStatus.error}. Vui lòng kiểm tra `appId` / `apiKey` hoặc bảng AppSheet.
+            </div>
+          ) : (
+            <div className="grid gap-2 text-xs sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+              {appSheetTables.map(table => (
+                <div key={table.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                  <div className="text-slate-500 text-[11px] uppercase tracking-[0.12em]">Bảng</div>
+                  <div className="font-semibold text-slate-900">{table.name}</div>
+                  <div className="text-slate-400 text-[11px]">id: {table.id}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Sync Status Banner when using fallback sample dataset */}
@@ -262,42 +317,43 @@ export default function App() {
 
           {/* CO_SO TABLE */}
           {(activeTab === 'all' || activeTab === 'coso') && (
-            <CoSoTable records={filteredRecords} />
+            <CoSoTable />
+          )}
+
+          {/* PHÂN KHÚC TABLE */}
+          {(activeTab === 'all' || activeTab === 'phankhuc') && (
+            <PhanKhucTable />
+          )}
+
+          {/* PHÂN TÍCH TỪ BẢNG KHAO_SAT */}
+          {activeTab === 'phantich' && (
+            <KhaoSatAnalysis
+              records={khaoSatRecords}
+              isLoading={khaoSatStatus.isLoading}
+              error={khaoSatStatus.error}
+              onRefresh={loadData}
+            />
           )}
 
           {/* DEPARTMENT SUMMARY TABLE */}
-          {(activeTab === 'all' || activeTab === 'dept') && (
+          {activeTab === 'all' && (
             <DepartmentSummaryTable records={filteredRecords} />
-          )}
-
-          {/* SECTION 1 */}
-          {(activeTab === 'all' || activeTab === '1') && (
-            <Section1DisplayVsRecommend records={filteredRecords} />
           )}
 
           {/* SECTION 2 */}
           {(activeTab === 'all' || activeTab === '2') && (
-            <Section2DisplayByDept records={filteredRecords} />
-          )}
-
-          {/* SECTION 3 */}
-          {(activeTab === 'all' || activeTab === '3') && (
-            <Section3RecommendByDept records={filteredRecords} />
+            <Section2DisplayByDept
+              records={filteredDisplayDealerRecords}
+              onAddDealer={() => setIsDisplayDealerModalOpen(true)}
+            />
           )}
 
           {/* SECTION 4 */}
           {(activeTab === 'all' || activeTab === '4') && (
-            <Section4SegmentShare records={filteredRecords} />
-          )}
-
-          {/* SECTION 5 */}
-          {(activeTab === 'all' || activeTab === '5') && (
-            <Section5DealerDetail records={filteredRecords} />
-          )}
-
-          {/* SECTION 6 */}
-          {(activeTab === 'all' || activeTab === '6') && (
-            <Section6CompetitorBySegment records={filteredRecords} />
+            <Section4SegmentShare
+              records={segmentRecords}
+              onAddSegment={() => setIsSegmentModalOpen(true)}
+            />
           )}
 
         </div>
@@ -310,6 +366,16 @@ export default function App() {
         onClose={() => setIsModalOpen(false)}
         onAddLocalRecord={handleAddLocalRecord}
         config={config}
+      />
+      <NewDisplayDealerModal
+        isOpen={isDisplayDealerModalOpen}
+        onClose={() => setIsDisplayDealerModalOpen(false)}
+        onSaved={loadData}
+      />
+      <NewSegmentModal
+        isOpen={isSegmentModalOpen}
+        onClose={() => setIsSegmentModalOpen(false)}
+        onSaved={loadData}
       />
 
     </div>

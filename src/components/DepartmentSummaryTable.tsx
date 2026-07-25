@@ -1,7 +1,6 @@
 import React from 'react';
 import { AuditRecord } from '../types';
-import { Building2, Package, Layers, Megaphone, Store, Sparkles, TrendingUp, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { Building2, Megaphone, Store } from 'lucide-react';
 
 interface DepartmentSummaryTableProps {
   records: AuditRecord[];
@@ -42,18 +41,15 @@ export const DepartmentSummaryTable: React.FC<DepartmentSummaryTableProps> = ({ 
   ).length;
 
   // 4. Products & Competitors breakdown by Dept
-  // Top product segments by Dept
   const segmentCountNhua: Record<string, number> = {};
   const segmentCountGo: Record<string, number> = {};
   const compCountNhua: Record<string, number> = {};
   const compCountGo: Record<string, number> = {};
 
   records.forEach(r => {
-    // Check if record relates to Hobi Nhựa
     const isNhuaDept = r.displayDepartment === 'Hobi Nhựa' || r.displayDepartment === 'Cả 2 phòng' ||
                        r.recommendDepartment === 'Hobi Nhựa' || r.recommendDepartment === 'Cả 2 phòng';
     
-    // Check if record relates to Hobi Gỗ
     const isGoDept = r.displayDepartment === 'Hobi Gỗ' || r.displayDepartment === 'Cả 2 phòng' ||
                      r.recommendDepartment === 'Hobi Gỗ' || r.recommendDepartment === 'Cả 2 phòng';
 
@@ -66,7 +62,6 @@ export const DepartmentSummaryTable: React.FC<DepartmentSummaryTableProps> = ({ 
           segmentCountGo[seg.name] = (segmentCountGo[seg.name] || 0) + 1;
         }
 
-        // Competitors
         if (seg.mainCompetitors) {
           const comps = seg.mainCompetitors.split(/[,;\n]+/).map(c => c.trim()).filter(Boolean);
           comps.forEach(c => {
@@ -86,28 +81,6 @@ export const DepartmentSummaryTable: React.FC<DepartmentSummaryTableProps> = ({ 
 
   const topCompsNhua = Object.entries(compCountNhua).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const topCompsGo = Object.entries(compCountGo).sort((a, b) => b[1] - a[1]).slice(0, 3);
-
-  // Comparison Bar Chart Data
-  const chartData = [
-    {
-      name: 'Trưng Bày Mẫu',
-      'Hobi Nhựa': totalDisplayNhua,
-      'Hobi Gỗ': totalDisplayGo,
-      'Cả 2 Phòng': displayBoth,
-    },
-    {
-      name: 'Giới Thiệu Sản Phẩm',
-      'Hobi Nhựa': totalRecNhua,
-      'Hobi Gỗ': totalRecGo,
-      'Cả 2 Phòng': recBoth,
-    },
-    {
-      name: 'Vừa Trưng Bày Vừa Giới Thiệu',
-      'Hobi Nhựa': bothDisplayAndRecNhua,
-      'Hobi Gỗ': bothDisplayAndRecGo,
-      'Cả 2 Phòng': Math.min(displayBoth, recBoth),
-    }
-  ];
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-6">
@@ -299,149 +272,6 @@ export const DepartmentSummaryTable: React.FC<DepartmentSummaryTableProps> = ({ 
           </div>
         </div>
 
-      </div>
-
-      {/* MASTER COMPARISON TABLE */}
-      <div className="pt-2 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            Bảng Báo Cáo Tổng Hợp So Sánh 2 Phòng Kinh Doanh
-          </h3>
-          <span className="text-xs text-slate-500 italic">Cả 2 phòng = Hobi Nhựa + Hobi Gỗ</span>
-        </div>
-
-        <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-2xs">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900 text-white font-bold">
-              <tr>
-                <th className="p-3.5">Hạng Mục / Tiêu Chí Khảo Sát</th>
-                <th className="p-3.5 text-center bg-blue-900/60">Phòng Hobi Nhựa</th>
-                <th className="p-3.5 text-center bg-amber-900/60">Phòng Hobi Gỗ</th>
-                <th className="p-3.5 text-center bg-purple-900/60">Cả 2 Phòng (Hợp Tác)</th>
-                <th className="p-3.5 text-right bg-slate-800">Toàn Thị Trường</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 font-medium text-slate-800">
-              
-              {/* Row 1: Trưng Bày Độc Quyền / Độc Lập */}
-              <tr className="hover:bg-slate-50">
-                <td className="p-3 font-semibold text-slate-900">
-                  Số Đại Lý Trưng Bày Độc Lập (Chỉ 1 phòng)
-                </td>
-                <td className="p-3 text-center font-bold text-sky-700">{displayNhuaOnly}</td>
-                <td className="p-3 text-center font-bold text-amber-700">{displayGoOnly}</td>
-                <td className="p-3 text-center text-slate-400">—</td>
-                <td className="p-3 text-right font-bold text-slate-900">{displayNhuaOnly + displayGoOnly}</td>
-              </tr>
-
-              {/* Row 2: Trưng Bày Cả 2 Phòng */}
-              <tr className="bg-purple-50/30 hover:bg-purple-50/60 font-semibold">
-                <td className="p-3 font-bold text-purple-900 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-purple-600" />
-                  Số Đại Lý Trưng Bày Cả 2 Phòng (Nhựa + Gỗ)
-                </td>
-                <td className="p-3 text-center font-bold text-purple-800">{displayBoth}</td>
-                <td className="p-3 text-center font-bold text-purple-800">{displayBoth}</td>
-                <td className="p-3 text-center font-extrabold text-purple-900 bg-purple-100/60">{displayBoth}</td>
-                <td className="p-3 text-right font-bold text-purple-900">{displayBoth}</td>
-              </tr>
-
-              {/* Row 3: TỔNG ĐẠI LÝ TRƯNG BÀY */}
-              <tr className="bg-slate-100/80 font-bold border-t-2 border-slate-300">
-                <td className="p-3 text-slate-900">
-                  TỔNG SỐ ĐẠI LÝ TRƯNG BÀY MẪU SẢN PHẨM
-                </td>
-                <td className="p-3 text-center text-sm font-black text-sky-900">{totalDisplayNhua}</td>
-                <td className="p-3 text-center text-sm font-black text-amber-900">{totalDisplayGo}</td>
-                <td className="p-3 text-center text-sm font-black text-purple-900">{displayBoth}</td>
-                <td className="p-3 text-right text-sm font-black text-slate-900">{totalDisplaying}</td>
-              </tr>
-
-              {/* Row 4: Tỷ lệ Trưng Bày / Tổng Đại Lý Trưng Bày */}
-              <tr className="hover:bg-slate-50 text-slate-600">
-                <td className="p-3 font-medium italic">
-                  Tỷ lệ bao phủ trên tổng số đại lý có trưng bày Hobi
-                </td>
-                <td className="p-3 text-center font-bold text-sky-700">
-                  {totalDisplaying > 0 ? Math.round((totalDisplayNhua / totalDisplaying) * 100) : 0}%
-                </td>
-                <td className="p-3 text-center font-bold text-amber-700">
-                  {totalDisplaying > 0 ? Math.round((totalDisplayGo / totalDisplaying) * 100) : 0}%
-                </td>
-                <td className="p-3 text-center font-bold text-purple-800">
-                  {totalDisplaying > 0 ? Math.round((displayBoth / totalDisplaying) * 100) : 0}%
-                </td>
-                <td className="p-3 text-right font-bold text-slate-900">100%</td>
-              </tr>
-
-              {/* Section Divider */}
-              <tr className="bg-slate-200/60 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                <td colSpan={5} className="px-3 py-1.5">
-                  Phần 2: Giới Thiệu Sản Phẩm & Tư Vấn Khách Hàng
-                </td>
-              </tr>
-
-              {/* Row 5: Giới Thiệu Độc Lập */}
-              <tr className="hover:bg-slate-50">
-                <td className="p-3 font-semibold text-slate-900">
-                  Số Đại Lý Giới Thiệu Độc Lập (Chỉ 1 phòng)
-                </td>
-                <td className="p-3 text-center font-bold text-sky-700">{recNhuaOnly}</td>
-                <td className="p-3 text-center font-bold text-amber-700">{recGoOnly}</td>
-                <td className="p-3 text-center text-slate-400">—</td>
-                <td className="p-3 text-right font-bold text-slate-900">{recNhuaOnly + recGoOnly}</td>
-              </tr>
-
-              {/* Row 6: Giới Thiệu Cả 2 Phòng */}
-              <tr className="bg-purple-50/30 hover:bg-purple-50/60 font-semibold">
-                <td className="p-3 font-bold text-purple-900 flex items-center gap-1.5">
-                  <Megaphone className="w-3.5 h-3.5 text-purple-600" />
-                  Số Đại Lý Giới Thiệu Cả 2 Phòng (Nhựa + Gỗ)
-                </td>
-                <td className="p-3 text-center font-bold text-purple-800">{recBoth}</td>
-                <td className="p-3 text-center font-bold text-purple-800">{recBoth}</td>
-                <td className="p-3 text-center font-extrabold text-purple-900 bg-purple-100/60">{recBoth}</td>
-                <td className="p-3 text-right font-bold text-purple-900">{recBoth}</td>
-              </tr>
-
-              {/* Row 7: TỔNG ĐẠI LÝ GIỚI THIỆU */}
-              <tr className="bg-emerald-50/80 font-bold border-t-2 border-emerald-300">
-                <td className="p-3 text-emerald-950">
-                  TỔNG SỐ ĐẠI LÝ GIỚI THIỆU SẢN PHẨM HOBI
-                </td>
-                <td className="p-3 text-center text-sm font-black text-sky-900">{totalRecNhua}</td>
-                <td className="p-3 text-center text-sm font-black text-amber-900">{totalRecGo}</td>
-                <td className="p-3 text-center text-sm font-black text-purple-900">{recBoth}</td>
-                <td className="p-3 text-right text-sm font-black text-emerald-900">{totalRecommending}</td>
-              </tr>
-
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* COMPARISON CHART */}
-      <div className="pt-2">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
-          So Sánh Quy Mô Trưng Bày & Giới Thiệu Giữa Các Phòng
-        </h3>
-        <div className="h-64 bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 600 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
-              />
-              <Legend wrapperStyle={{ fontSize: '12px', pt: '10px' }} />
-              <Bar dataKey="Hobi Nhựa" fill="#0284c7" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Hobi Gỗ" fill="#d97706" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Cả 2 Phòng" fill="#7c3aed" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </div>
 
     </div>

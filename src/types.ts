@@ -40,6 +40,19 @@ export interface AppSheetConfig {
   tableName: string;
 }
 
+export interface AppSheetTable {
+  id: string;
+  name: string;
+}
+
+export interface AppSheetTablesResult {
+  success: boolean;
+  tables?: {
+    Tables: AppSheetTable[];
+  };
+  error?: string;
+}
+
 export interface SyncStatus {
   lastSyncTime: string | null;
   isLoading: boolean;
@@ -58,5 +71,12 @@ export interface CoSoItem {
   ngay_tao: string; // Ngày khởi tạo / khảo sát
   trang_thai_dong_bo?: 'Chờ đổ data' | 'Đã đổ data Co_so' | 'Lỗi đồng bộ';
   ghi_chu?: string;
+}
+
+export interface PhanKhucItem {
+  id: string; // Mã tự tạo PK001, PK002...
+  ten_phan_khuc: string; // Tên phân khúc (VD: Sàn nhựa hèm khóa 4mm)
+  ngay_tao: string; // Ngày khởi tạo
+  trang_thai_dong_bo?: 'Chờ đổ data' | 'Đã đổ data Phan_khuc' | 'Lỗi đồng bộ';
 }
 

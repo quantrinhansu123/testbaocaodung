@@ -2,9 +2,17 @@ import React from 'react';
 import { RefreshCw, Radio, Plus, Database, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { SyncStatus, AppSheetConfig } from '../types';
 
+interface TableStatus {
+  isLoading: boolean;
+  error: string | null;
+  lastRefresh: string | null;
+}
+
 interface HeaderProps {
   syncStatus: SyncStatus;
   config: AppSheetConfig;
+  appSheetTableCount: number;
+  tableStatus: TableStatus;
   autoRefreshInterval: number;
   setAutoRefreshInterval: (seconds: number) => void;
   onRefresh: () => void;
@@ -14,6 +22,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   syncStatus,
   config,
+  appSheetTableCount,
+  tableStatus,
   autoRefreshInterval,
   setAutoRefreshInterval,
   onRefresh,
@@ -71,6 +81,34 @@ export const Header: React.FC<HeaderProps> = ({
               {syncStatus.lastSyncTime && (
                 <span className="text-slate-400 border-l border-slate-700 pl-2 text-[11px] flex items-center gap-1">
                   <Clock className="w-3 h-3" /> {syncStatus.lastSyncTime}
+                </span>
+              )}
+            </div>
+
+            {/* AppSheet table connection summary */}
+            <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
+              {tableStatus.isLoading ? (
+                <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+              ) : tableStatus.error ? (
+                <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+              ) : (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+              )}
+
+              <span className="text-slate-300">
+                {tableStatus.isLoading
+                  ? 'Kiểm tra bảng...'
+                  : tableStatus.error
+                  ? 'Không kết nối bảng'
+                  : `Đã tìm ${appSheetTableCount} bảng`}
+              </span>
+
+              {tableStatus.lastRefresh && (
+                <span className="text-slate-400 border-l border-slate-700 pl-2 text-[11px] flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> {tableStatus.lastRefresh}
                 </span>
               )}
             </div>

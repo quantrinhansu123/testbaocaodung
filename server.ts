@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
@@ -78,6 +79,47 @@ app.post('/api/appsheet/fetch', async (req, res) => {
   }
 });
 
+// AppSheet API Proxy: List all tables for an app
+app.post('/api/appsheet/tables', async (req, res) => {
+  try {
+    const {
+      appId = DEFAULT_APP_ID,
+      apiKey = DEFAULT_API_KEY
+    } = req.body || {};
+
+    const url = `https://api.appsheet.com/api/v2/apps/${appId}/tables`;
+    console.log(`[AppSheet API] Listing tables for app: ${appId}`);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'ApplicationAccessKey': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: data || `AppSheet responded with status ${response.status}`,
+        data
+      });
+    }
+
+    return res.json({
+      success: true,
+      tables: data
+    });
+  } catch (err: any) {
+    console.error('[AppSheet Tables Proxy Error]:', err?.message || err);
+    return res.status(500).json({
+      success: false,
+      error: err?.message || 'Server error fetching AppSheet table list'
+    });
+  }
+});
+
 // AppSheet API Proxy: Add record
 app.post('/api/appsheet/add', async (req, res) => {
   try {
@@ -111,10 +153,18 @@ app.post('/api/appsheet/add', async (req, res) => {
     });
 
     const data = await response.json().catch(() => ({}));
-    return res.json({
-      success: response.ok,
+    const appSheetError =
+      data?.error ||
+      data?.Error ||
+      data?.message ||
+      data?.Message ||
+      (!response.ok ? JSON.stringify(data) : undefined);
+
+    return res.status(response.ok ? 200 : response.status).json({
+      success: response.ok && !appSheetError,
       status: response.status,
-      data
+      data,
+      error: appSheetError
     });
   } catch (err: any) {
     return res.status(500).json({

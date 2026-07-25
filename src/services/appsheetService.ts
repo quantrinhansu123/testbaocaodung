@@ -1,4 +1,4 @@
-import { AuditRecord, AppSheetConfig } from '../types';
+import { AuditRecord, AppSheetConfig, AppSheetTablesResult, PhanKhucItem } from '../types';
 import { INITIAL_MOCK_AUDITS } from '../data/mockData';
 
 export const DEFAULT_APPSHEET_CONFIG: AppSheetConfig = {
@@ -30,7 +30,7 @@ export function parseAppSheetRowToAudit(row: Record<string, any>, index: number)
   );
   
   const dealerName = String(
-    getRawField(row, ['Ten_DaiLy', 'Tên đại lý', 'Đại lý', 'DaiLy', 'DealerName', 'TenDaiLy']) || `Đại lý Khảo Sát ${index + 1}`
+    getRawField(row, ['dai_ly', 'Ten_DaiLy', 'Ten_dai_ly', 'Tên đại lý', 'Đại lý', 'DaiLy', 'DealerName', 'TenDaiLy']) || `Đại lý Khảo Sát ${index + 1}`
   );
 
   const address = String(
@@ -53,21 +53,27 @@ export function parseAppSheetRowToAudit(row: Record<string, any>, index: number)
     getRawField(row, ['Nguoi_Khao_Sat', 'Người khảo sát', 'Shopper']) || 'KTV Khảo sát'
   );
 
-  // Parsing Trưng bày Hobi
-  const rawTB = getRawField(row, ['Trung_Bay_Hobi', 'Trưng bày Hobi', 'DisplayHobi', 'Display']) ?? true;
+  // Parsing Trưng bày Hobi (Khao_sat uses trung_bay)
+  const rawTB = getRawField(row, ['trung_bay', 'Trung_Bay_Hobi', 'Trưng bày Hobi', 'DisplayHobi', 'Display']);
   let isDisplayingHobi = true;
-  if (typeof rawTB === 'boolean') {
+  if (rawTB === undefined || rawTB === null) {
+    isDisplayingHobi = true;
+  } else if (typeof rawTB === 'boolean') {
     isDisplayingHobi = rawTB;
   } else if (typeof rawTB === 'string') {
-    const val = rawTB.toLowerCase();
-    if (val.includes('không') || val.includes('no') || val === 'false' || val === '0') {
+    const val = rawTB.toLowerCase().trim();
+    if (!val || val.includes('không') || val.includes('no') || val === 'false' || val === '0') {
       isDisplayingHobi = false;
+    } else {
+      isDisplayingHobi = true;
     }
+  } else {
+    isDisplayingHobi = Boolean(rawTB);
   }
 
   // Display Department
   const rawDisplayDept = String(
-    getRawField(row, ['Phong_KD_Trung_Bay', 'Phòng KD Trưng bày', 'DisplayDepartment']) || ''
+    getRawField(row, ['Phong_KD_Trung_Bay', 'phong_kinh_doanh', 'Phòng KD Trưng bày', 'DisplayDepartment']) || ''
   );
   let displayDepartment: AuditRecord['displayDepartment'] = 'Cả 2 phòng';
   if (!isDisplayingHobi || rawDisplayDept.includes('Không')) {
@@ -80,16 +86,22 @@ export function parseAppSheetRowToAudit(row: Record<string, any>, index: number)
     displayDepartment = 'Hobi Gỗ';
   }
 
-  // Parsing Giới thiệu Hobi
-  const rawGT = getRawField(row, ['Gioi_Thieu_Hobi', 'Giới thiệu Hobi', 'RecommendHobi', 'Recommend']) ?? true;
+  // Parsing Giới thiệu Hobi (Khao_sat uses gioi_thieu)
+  const rawGT = getRawField(row, ['gioi_thieu', 'Gioi_Thieu_Hobi', 'Giới thiệu Hobi', 'RecommendHobi', 'Recommend']);
   let isRecommendingHobi = true;
-  if (typeof rawGT === 'boolean') {
+  if (rawGT === undefined || rawGT === null) {
+    isRecommendingHobi = true;
+  } else if (typeof rawGT === 'boolean') {
     isRecommendingHobi = rawGT;
   } else if (typeof rawGT === 'string') {
-    const val = rawGT.toLowerCase();
-    if (val.includes('không') || val.includes('no') || val === 'false' || val === '0') {
+    const val = rawGT.toLowerCase().trim();
+    if (!val || val.includes('không') || val.includes('no') || val === 'false' || val === '0') {
       isRecommendingHobi = false;
+    } else {
+      isRecommendingHobi = true;
     }
+  } else {
+    isRecommendingHobi = Boolean(rawGT);
   }
 
   // Recommend Department
@@ -167,7 +179,10 @@ export function parseAppSheetRowToAudit(row: Record<string, any>, index: number)
   };
 }
 
-export async function fetchAppSheetAudits(config: AppSheetConfig = DEFAULT_APPSHEET_CONFIG): Promise<{
+export async function fetchAppSheetAudits(
+  config: AppSheetConfig = DEFAULT_APPSHEET_CONFIG,
+  useSampleFallback = true
+): Promise<{
   records: AuditRecord[];
   isFallback: boolean;
   error?: string;
@@ -192,7 +207,15 @@ export async function fetchAppSheetAudits(config: AppSheetConfig = DEFAULT_APPSH
       };
     }
 
-    // If AppSheet returned success but empty array or error, merge baseline sample so app is 100% interactive
+    if (!useSampleFallback) {
+      return {
+        records: [],
+        isFallback: false,
+        error: result.error
+      };
+    }
+
+    // If AppSheet returned success but empty array or error, use the baseline sample.
     return {
       records: INITIAL_MOCK_AUDITS,
       isFallback: true,
@@ -201,8 +224,8 @@ export async function fetchAppSheetAudits(config: AppSheetConfig = DEFAULT_APPSH
   } catch (err: any) {
     console.warn('AppSheet fetch error, using initial mock data:', err?.message);
     return {
-      records: INITIAL_MOCK_AUDITS,
-      isFallback: true,
+      records: useSampleFallback ? INITIAL_MOCK_AUDITS : [],
+      isFallback: useSampleFallback,
       error: err?.message || 'Không thể kết nối máy chủ API AppSheet'
     };
   }
@@ -236,5 +259,52 @@ export async function addAppSheetAudit(record: Partial<AuditRecord>, config: App
     return await res.json();
   } catch (err: any) {
     return { success: false, error: err?.message };
+  }
+}
+
+export async function fetchAppSheetTables(config: AppSheetConfig = DEFAULT_APPSHEET_CONFIG): Promise<AppSheetTablesResult> {
+  try {
+    const res = await fetch('/api/appsheet/tables', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        appId: config.appId,
+        apiKey: config.apiKey
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error(`Server status ${res.status}`);
+    }
+
+    const result = await res.json();
+    return result as AppSheetTablesResult;
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
+export async function fetchPhanKhucItems(): Promise<{ records: PhanKhucItem[]; error?: string }> {
+  try {
+    const res = await fetch('/api/appsheet/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableName: 'Phan_khuc' })
+    });
+    const result = await res.json();
+
+    if (!res.ok || !result.success) {
+      return { records: [], error: result.error || `Server status ${res.status}` };
+    }
+
+    return {
+      records: (Array.isArray(result.rows) ? result.rows : []).map((row: Record<string, any>) => ({
+        id: String(row.id || row.ID || row._RowNumber),
+        ten_phan_khuc: String(row.Ten_phan_khuc || row.ten_phan_khuc || ''),
+        ngay_tao: ''
+      }))
+    };
+  } catch (err: any) {
+    return { records: [], error: err?.message || 'Không thể tải bảng Phan_khuc' };
   }
 }
