@@ -1,0 +1,6 @@
+{
+  "name": "Phan Tich Thi Truong Hobi - AppSheet",
+  "description": "Bảng điều khiển phân tích dữ liệu thị trường đại lý Hobi kết nối trực tiếp AppSheet API theo thời gian thực",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

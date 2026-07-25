@@ -1,0 +1,303 @@
+import { AuditRecord } from '../types';
+
+export const INITIAL_MOCK_AUDITS: AuditRecord[] = [
+  {
+    id: 'TRB-001',
+    dealerId: 'DL-01',
+    dealerName: 'Đại lý Sàn Gỗ Minh Anh',
+    address: '142 Nguyễn Trãi, Thanh Xuân, Hà Nội',
+    phone: '0983123456',
+    region: 'Hà Nội',
+    auditDate: '2026-07-20 09:30',
+    mysteryShopperName: 'Phạm Văn Hùng',
+    isDisplayingHobi: true,
+    displayDepartment: 'Cả 2 phòng',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Cả 2 phòng',
+    hobiSegmentsRecommended: ['Sàn nhựa hèm khóa 4mm', 'Sàn gỗ công nghiệp 8mm', 'Sàn gỗ công nghiệp 12mm'],
+    otherBrands: ['An Cường', 'Kosmos', 'Inovar'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Tấm ốp tường PVC', recommendedCompetitorBrand: 'Kosmos', reasonOrNote: 'Tấm ốp Hobi chưa trưng bày mẫu tấm phẳng 3D' }
+    ],
+    notes: 'Đại lý phản hồi mẫu Hobi gỗ 12mm tông xám vàng bán rất chạy. Nhân viên tư vấn nhiệt tình.'
+  },
+  {
+    id: 'TRB-002',
+    dealerId: 'DL-02',
+    dealerName: 'Nội Thất & Sàn Nhựa Hùng Phát',
+    address: '88 Hoàng Quốc Việt, Cầu Giấy, Hà Nội',
+    phone: '0912888999',
+    region: 'Hà Nội',
+    auditDate: '2026-07-20 11:15',
+    mysteryShopperName: 'Phạm Văn Hùng',
+    isDisplayingHobi: true,
+    displayDepartment: 'Hobi Nhựa',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Hobi Nhựa',
+    hobiSegmentsRecommended: ['Sàn nhựa hèm khóa 4mm', 'Sàn nhựa dán keo 2mm'],
+    otherBrands: ['Glotex', 'Galamax', 'Janmi'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn gỗ công nghiệp 8mm', recommendedCompetitorBrand: 'Glotex', reasonOrNote: 'Khách hỏi sàn gỗ thì giới thiệu Glotex giá rẻ' },
+      { segment: 'Sàn gỗ công nghiệp 12mm', recommendedCompetitorBrand: 'Janmi', reasonOrNote: 'Janmi thương hiệu Malaysia có sẵn kẹp mẫu' }
+    ],
+    notes: 'Tập trung chuyên làm nội thất chung cư, chuộng sàn nhựa Hobi hèm khóa.'
+  },
+  {
+    id: 'TRB-003',
+    dealerId: 'DL-03',
+    dealerName: 'Kho Sàn Gỗ Đức Trí',
+    address: '450 Ngô Quyền, Sơn Trà, Đà Nẵng',
+    phone: '0905123789',
+    region: 'Đà Nẵng',
+    auditDate: '2026-07-21 14:00',
+    mysteryShopperName: 'Trần Thị Thu',
+    isDisplayingHobi: true,
+    displayDepartment: 'Hobi Gỗ',
+    isRecommendingHobi: false,
+    recommendDepartment: 'Không giới thiệu',
+    hobiSegmentsRecommended: [],
+    otherBrands: ['Robina', 'Inovar', 'KronoOriginal'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn gỗ công nghiệp 8mm', recommendedCompetitorBrand: 'Robina', reasonOrNote: 'Robina chiết khấu cho thợ cao hơn' },
+      { segment: 'Sàn gỗ công nghiệp 12mm', recommendedCompetitorBrand: 'Inovar', reasonOrNote: 'Đại lý ưu tiên kho tồn sẵn Inovar' },
+      { segment: 'Sàn nhựa hèm khóa 4mm', recommendedCompetitorBrand: 'KronoOriginal', reasonOrNote: 'Giới thiệu nhựa hèm khóa nhập khẩu' }
+    ],
+    notes: 'Có kệ trưng bày Hobi gỗ góc trong nhưng khi hỏi mua lại lái sang Robina.'
+  },
+  {
+    id: 'TRB-004',
+    dealerId: 'DL-04',
+    dealerName: 'Đại lý Vật Liệu Xây Dựng Nam Hà',
+    address: '321 Lê Hồng Phong, Ngô Quyền, Hải Phòng',
+    phone: '0936777123',
+    region: 'Hải Phòng',
+    auditDate: '2026-07-21 16:30',
+    mysteryShopperName: 'Lê Hoàng Long',
+    isDisplayingHobi: true,
+    displayDepartment: 'Cả 2 phòng',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Hobi Nhựa',
+    hobiSegmentsRecommended: ['Sàn nhựa hèm khóa 4mm', 'Tấm ốp tường PVC'],
+    otherBrands: ['Kosmos', 'An Cường', 'Galamax'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn gỗ công nghiệp 12mm', recommendedCompetitorBrand: 'An Cường', reasonOrNote: 'Khách làm biệt thự ưu tiên thương hiệu An Cường' }
+    ],
+    notes: 'Đã treo bảng mẫu Hobi Nhựa ở cửa chính, rất dễ nhìn.'
+  },
+  {
+    id: 'TRB-005',
+    dealerId: 'DL-05',
+    dealerName: 'Trung Tâm Trang Trí Nội Thất Khang Gia',
+    address: '789 Lý Thường Kiệt, Quận 10, TP.HCM',
+    phone: '0903999111',
+    region: 'TP.HCM',
+    auditDate: '2026-07-22 08:45',
+    mysteryShopperName: 'Nguyễn Minh Tâm',
+    isDisplayingHobi: true,
+    displayDepartment: 'Cả 2 phòng',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Cả 2 phòng',
+    hobiSegmentsRecommended: ['Sàn nhựa hèm khóa 4mm', 'Sàn gỗ công nghiệp 8mm', 'Sàn gỗ công nghiệp 12mm', 'Tấm ốp tường PVC'],
+    otherBrands: ['An Cường', 'Thiên Hà', 'Kosmos'],
+    nonHobiCompetitorsBySegment: [],
+    notes: 'Đại lý kim cương của Hobi. Nhân viên nắm rõ bảng giá & đặc tính chống nước.'
+  },
+  {
+    id: 'TRB-006',
+    dealerId: 'DL-06',
+    dealerName: 'Showroom Sàn Gỗ Kim Long',
+    address: '215 Nguyễn Văn Linh, Long Biên, Hà Nội',
+    phone: '0978666555',
+    region: 'Hà Nội',
+    auditDate: '2026-07-22 10:20',
+    mysteryShopperName: 'Phạm Văn Hùng',
+    isDisplayingHobi: true,
+    displayDepartment: 'Hobi Gỗ',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Hobi Gỗ',
+    hobiSegmentsRecommended: ['Sàn gỗ công nghiệp 8mm', 'Sàn gỗ công nghiệp 12mm'],
+    otherBrands: ['Robina', 'Janmi'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn nhựa hèm khóa 4mm', recommendedCompetitorBrand: 'Glotex', reasonOrNote: 'Chỉ bán sàn nhựa Glotex do hợp đồng cũ' }
+    ],
+    notes: 'Showroom đẹp, kệ Hobi gỗ đặt ngay lối vào showroom.'
+  },
+  {
+    id: 'TRB-007',
+    dealerId: 'DL-07',
+    dealerName: 'Cửa Hàng Vật Liệu Ốp Tường Tân Thịnh',
+    address: '56 Trần Hưng Đạo, Ninh Kiều, Cần Thơ',
+    phone: '0918333444',
+    region: 'Cần Thơ',
+    auditDate: '2026-07-22 14:15',
+    mysteryShopperName: 'Nguyễn Minh Tâm',
+    isDisplayingHobi: false,
+    displayDepartment: 'Không trưng bày',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Hobi Nhựa',
+    hobiSegmentsRecommended: ['Sàn nhựa hèm khóa 4mm', 'Tấm ốp tường PVC'],
+    otherBrands: ['Kosmos', 'Glotex'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn gỗ công nghiệp 8mm', recommendedCompetitorBrand: 'Glotex', reasonOrNote: 'Cần Thơ chuộng sàn nhựa hơn, sàn gỗ tư vấn Glotex' }
+    ],
+    notes: 'Chưa có kệ mẫu Hobi do chật diện tích nhưng catalog Hobi nhựa có sẵn trên bàn tiếp khách.'
+  },
+  {
+    id: 'TRB-008',
+    dealerId: 'DL-08',
+    dealerName: 'Đại lý Sàn Nhựa & Gỗ Toàn Thắng',
+    address: '102 Trường Chinh, Đống Đa, Hà Nội',
+    phone: '0988222333',
+    region: 'Hà Nội',
+    auditDate: '2026-07-22 16:00',
+    mysteryShopperName: 'Phạm Văn Hùng',
+    isDisplayingHobi: true,
+    displayDepartment: 'Cả 2 phòng',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Cả 2 phòng',
+    hobiSegmentsRecommended: ['Sàn nhựa hèm khóa 4mm', 'Sàn gỗ công nghiệp 12mm'],
+    otherBrands: ['An Cường', 'Inovar', 'Kosmos'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn gỗ công nghiệp 8mm', recommendedCompetitorBrand: 'Inovar', reasonOrNote: 'Tư vấn Inovar cho khách phân khúc bình dân' }
+    ],
+    notes: 'Đang có chương trình khuyến mãi tháng 7 cho sàn nhựa Hobi.'
+  },
+  {
+    id: 'TRB-009',
+    dealerId: 'DL-09',
+    dealerName: 'Nội Thất Hoàng Gia',
+    address: '333 Nguyễn Oanh, Gò Vấp, TP.HCM',
+    phone: '0908112233',
+    region: 'TP.HCM',
+    auditDate: '2026-07-23 09:00',
+    mysteryShopperName: 'Nguyễn Minh Tâm',
+    isDisplayingHobi: true,
+    displayDepartment: 'Hobi Nhựa',
+    isRecommendingHobi: false,
+    recommendDepartment: 'Không giới thiệu',
+    hobiSegmentsRecommended: [],
+    otherBrands: ['Kosmos', 'An Cường', 'Galamax'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn nhựa hèm khóa 4mm', recommendedCompetitorBrand: 'Kosmos', reasonOrNote: 'Tư vấn Kosmos vì đang được hoa hồng đại lý tốt hơn' },
+      { segment: 'Tấm ốp tường PVC', recommendedCompetitorBrand: 'An Cường', reasonOrNote: 'Khách đòi xem mẫu vân đá An Cường' }
+    ],
+    notes: 'Có kệ Hobi Nhựa nhưng nhân viên tư vấn đẩy thương hiệu Kosmos trước.'
+  },
+  {
+    id: 'TRB-010',
+    dealerId: 'DL-10',
+    dealerName: 'Nội Thất Đông Dương',
+    address: '89 Đường 3/2, Quận 10, TP.HCM',
+    phone: '0913444555',
+    region: 'TP.HCM',
+    auditDate: '2026-07-23 11:30',
+    mysteryShopperName: 'Nguyễn Minh Tâm',
+    isDisplayingHobi: true,
+    displayDepartment: 'Cả 2 phòng',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Hobi Gỗ',
+    hobiSegmentsRecommended: ['Sàn gỗ công nghiệp 8mm', 'Sàn gỗ công nghiệp 12mm'],
+    otherBrands: ['An Cường', 'Inovar'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn nhựa hèm khóa 4mm', recommendedCompetitorBrand: 'Inovar', reasonOrNote: 'Tư vấn sàn nhựa hèm khóa Inovar' }
+    ],
+    notes: 'Trưng bày cả nhựa và gỗ nhưng thế mạnh tư vấn thuộc phòng Hobi Gỗ.'
+  },
+  {
+    id: 'TRB-011',
+    dealerId: 'DL-11',
+    dealerName: 'Vật Liệu Trang Trí Bình Minh',
+    address: '67 Phạm Văn Đồng, Bắc Từ Liêm, Hà Nội',
+    phone: '0977444111',
+    region: 'Hà Nội',
+    auditDate: '2026-07-23 14:20',
+    mysteryShopperName: 'Phạm Văn Hùng',
+    isDisplayingHobi: false,
+    displayDepartment: 'Không trưng bày',
+    isRecommendingHobi: false,
+    recommendDepartment: 'Không giới thiệu',
+    hobiSegmentsRecommended: [],
+    otherBrands: ['Glotex', 'Galamax', 'Thiên Hà'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn nhựa hèm khóa 4mm', recommendedCompetitorBrand: 'Glotex', reasonOrNote: 'Đại lý chưa kết nối phân phối Hobi' },
+      { segment: 'Sàn gỗ công nghiệp 8mm', recommendedCompetitorBrand: 'Galamax', reasonOrNote: 'Bán hàng phổ thông Galamax' }
+    ],
+    notes: 'Đại lý tiềm năng, chưa có hàng Hobi. Cần saleman Hobi nhựa tới chào mẫu.'
+  },
+  {
+    id: 'TRB-012',
+    dealerId: 'DL-12',
+    dealerName: 'Kho Sàn Gỗ An Bình',
+    address: '12 Đại Lộ Bình Dương, Thuận An, Bình Dương',
+    phone: '0909555666',
+    region: 'Bình Dương',
+    auditDate: '2026-07-23 16:10',
+    mysteryShopperName: 'Nguyễn Minh Tâm',
+    isDisplayingHobi: true,
+    displayDepartment: 'Hobi Gỗ',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Hobi Gỗ',
+    hobiSegmentsRecommended: ['Sàn gỗ công nghiệp 12mm'],
+    otherBrands: ['Robina', 'Janmi'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn gỗ công nghiệp 8mm', recommendedCompetitorBrand: 'Robina', reasonOrNote: 'Robina 8mm cốt xanh chống ẩm' }
+    ],
+    notes: 'Đánh giá cao dòng Hobi gỗ 12mm xỉ xám titan.'
+  },
+  {
+    id: 'TRB-013',
+    dealerId: 'DL-13',
+    dealerName: 'Đại lý Sàn Nhựa & Gỗ Phúc Thịnh',
+    address: '234 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP.HCM',
+    phone: '0938111222',
+    region: 'TP.HCM',
+    auditDate: '2026-07-24 09:15',
+    mysteryShopperName: 'Nguyễn Minh Tâm',
+    isDisplayingHobi: true,
+    displayDepartment: 'Cả 2 phòng',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Cả 2 phòng',
+    hobiSegmentsRecommended: ['Sàn nhựa hèm khóa 4mm', 'Sàn gỗ công nghiệp 8mm', 'Tấm ốp tường PVC'],
+    otherBrands: ['Kosmos', 'Glotex'],
+    nonHobiCompetitorsBySegment: [
+      { segment: 'Sàn gỗ công nghiệp 12mm', recommendedCompetitorBrand: 'Kosmos', reasonOrNote: 'Giới thiệu Kosmos 12mm cho căn hộ cao cấp' }
+    ],
+    notes: 'Cả 2 bộ kệ Hobi nhựa + gỗ đặt đối diện nhau rất ấn tượng.'
+  },
+  {
+    id: 'TRB-014',
+    dealerId: 'DL-14',
+    dealerName: 'Nội Thất Kiến Tạo Xanh',
+    address: '159 Nguyễn Chí Thanh, Đống Đa, Hà Nội',
+    phone: '0982555444',
+    region: 'Hà Nội',
+    auditDate: '2026-07-24 11:00',
+    mysteryShopperName: 'Phạm Văn Hùng',
+    isDisplayingHobi: true,
+    displayDepartment: 'Hobi Nhựa',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Hobi Nhựa',
+    hobiSegmentsRecommended: ['Sàn nhựa hèm khóa 4mm', 'Sàn nhựa dán keo 2mm'],
+    otherBrands: ['Inovar', 'Glotex'],
+    nonHobiCompetitorsBySegment: [],
+    notes: 'Nhân viên tư vấn sàn nhựa Hobi dán keo cho chuỗi cửa hàng thời trang.'
+  },
+  {
+    id: 'TRB-015',
+    dealerId: 'DL-15',
+    dealerName: 'Showroom Trang Trí Tường & Sàn Việt Mỹ',
+    address: '500 Lĩnh Nam, Hoàng Mai, Hà Nội',
+    phone: '0915666777',
+    region: 'Hà Nội',
+    auditDate: '2026-07-24 14:00',
+    mysteryShopperName: 'Phạm Văn Hùng',
+    isDisplayingHobi: true,
+    displayDepartment: 'Cả 2 phòng',
+    isRecommendingHobi: true,
+    recommendDepartment: 'Cả 2 phòng',
+    hobiSegmentsRecommended: ['Sàn nhựa hèm khóa 4mm', 'Sàn gỗ công nghiệp 8mm', 'Sàn gỗ công nghiệp 12mm', 'Tấm ốp tường PVC'],
+    otherBrands: ['An Cường', 'Kosmos'],
+    nonHobiCompetitorsBySegment: [],
+    notes: 'Trưng bày đẹp chuẩn quy cách Hobi, nhân viên nhiệt tình chào hàng.'
+  }
+];
