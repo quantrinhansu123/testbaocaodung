@@ -81,6 +81,14 @@ app.post('/api/appsheet/fetch', async (req, res) => {
 
 // AppSheet API Proxy: List all tables for an app
 app.post('/api/appsheet/tables', async (req, res) => {
+  const KNOWN_TABLES = [
+    { name: 'Trinhbay', id: 'Trinhbay' },
+    { name: 'Co_so', id: 'Co_so' },
+    { name: 'Dai_ly', id: 'Dai_ly' },
+    { name: 'Khao_sat', id: 'Khao_sat' },
+    { name: 'Phan_khuc', id: 'Phan_khuc' }
+  ];
+
   try {
     const {
       appId = DEFAULT_APP_ID,
@@ -98,12 +106,16 @@ app.post('/api/appsheet/tables', async (req, res) => {
       }
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      return res.status(response.status).json({
-        success: false,
-        error: data || `AppSheet responded with status ${response.status}`,
-        data
+      console.warn(`[AppSheet Tables Warning] Status ${response.status}:`, data);
+      // Keep UI usable when AppSheet list endpoint is flaky/rate-limited.
+      return res.status(200).json({
+        success: true,
+        tables: { Tables: KNOWN_TABLES },
+        warning: typeof data === 'string'
+          ? data
+          : (data?.message || data?.Message || `AppSheet tables API status ${response.status}`)
       });
     }
 
@@ -113,9 +125,10 @@ app.post('/api/appsheet/tables', async (req, res) => {
     });
   } catch (err: any) {
     console.error('[AppSheet Tables Proxy Error]:', err?.message || err);
-    return res.status(500).json({
-      success: false,
-      error: err?.message || 'Server error fetching AppSheet table list'
+    return res.status(200).json({
+      success: true,
+      tables: { Tables: KNOWN_TABLES },
+      warning: err?.message || 'Server error fetching AppSheet table list'
     });
   }
 });

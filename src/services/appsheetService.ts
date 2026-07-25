@@ -273,11 +273,17 @@ export async function fetchAppSheetTables(config: AppSheetConfig = DEFAULT_APPSH
       })
     });
 
+    const result = await res.json().catch(() => ({} as any));
     if (!res.ok) {
-      throw new Error(`Server status ${res.status}`);
+      return {
+        success: false,
+        error: typeof result.error === 'string'
+          ? result.error
+          : `Không thể lấy danh sách bảng (HTTP ${res.status})`,
+        tables: result.tables
+      };
     }
 
-    const result = await res.json();
     return result as AppSheetTablesResult;
   } catch (err: any) {
     return { success: false, error: err?.message };

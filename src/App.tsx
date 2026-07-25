@@ -92,16 +92,26 @@ export default function App() {
   }, [loadData]);
 
   const loadAppSheetTables = useCallback(async () => {
-    setTableStatus({ isLoading: true, error: null, lastRefresh: tableStatus.lastRefresh });
+    setTableStatus(prev => ({ ...prev, isLoading: true, error: null }));
     const result = await fetchAppSheetTables(config);
     if (result.success) {
       setAppSheetTables(result.tables?.Tables || []);
-      setTableStatus({ isLoading: false, error: null, lastRefresh: new Date().toLocaleTimeString('vi-VN') });
+      setTableStatus({
+        isLoading: false,
+        error: null,
+        lastRefresh: new Date().toLocaleTimeString('vi-VN')
+      });
     } else {
-      setAppSheetTables([]);
-      setTableStatus({ isLoading: false, error: result.error || 'Không thể lấy danh sách bảng AppSheet.', lastRefresh: null });
+      setAppSheetTables(result.tables?.Tables || []);
+      setTableStatus({
+        isLoading: false,
+        error: typeof result.error === 'string'
+          ? result.error
+          : 'Không thể lấy danh sách bảng AppSheet.',
+        lastRefresh: null
+      });
     }
-  }, [config, tableStatus.lastRefresh]);
+  }, [config]);
 
   useEffect(() => {
     loadAppSheetTables();
